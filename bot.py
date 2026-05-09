@@ -11,14 +11,35 @@ intents.message_content = True
 client = discord.Client(intents=intents)
 
 # -----------------------
-# MOOD SYSTEM
+# MOOD SYSTEM + AFFECTION
 # -----------------------
 mood = "neutral"
+hug_count = 0
+
+MOOD_POOL = ["neutral", "happy", "shy", "sleepy", "excited"]
 
 def update_mood():
     global mood
     if random.random() < 0.05:
-        mood = random.choice(["neutral", "happy", "shy", "sleepy", "excited"])
+        mood = random.choice(MOOD_POOL)
+
+def update_status():
+    """Rotating presence based on mood"""
+    try:
+        if mood == "happy":
+            activity = discord.Game(name="fuhihi… happy 🍄")
+        elif mood == "shy":
+            activity = discord.Game(name="…watching quietly")
+        elif mood == "sleepy":
+            activity = discord.Game(name="…sleepy mushrooms…")
+        elif mood == "excited":
+            activity = discord.Game(name="HYAHAAA energy!!")
+        else:
+            activity = discord.Game(name="fuhihi… 🍄")
+
+        return activity
+    except:
+        return discord.Game(name="fuhihi… 🍄")
 
 
 # -----------------------
@@ -27,7 +48,7 @@ def update_mood():
 HI_REPLIES = [
     "fuhihi… hello… 🍄",
     "fuhihi… oh… hi… 🍄",
-    "h-hello… fuhihi… 🍄",
+    "h-hello… f-fuhi… 🍄",
     "fuhihi… you noticed me… 🍄",
 ]
 
@@ -42,12 +63,9 @@ OCCASIONAL_REPLIES = [
     "…mushrooms are nice… 🍄",
     "…I'm here… fuhihi…",
     "fuhihi… I was listening…",
-    "…thank you… fuhihi…",
     "…let's shine together… ✨",
-    "fuhihi… you're all so bright…",
     "…I like it here… 🍄",
 ]
-
 
 OCCASIONAL_CHANCE = 0.03
 
@@ -57,6 +75,7 @@ OCCASIONAL_CHANCE = 0.03
 # -----------------------
 @client.event
 async def on_ready():
+    await client.change_presence(activity=update_status())
     print(f"Logged in as {client.user} (ID: {client.user.id})")
     print("Syoko is here… fuhihi… 🍄")
 
@@ -66,25 +85,30 @@ async def on_ready():
 # -----------------------
 @client.event
 async def on_message(message):
-    global mood
+    global mood, hug_count
 
     if message.author == client.user:
         return
 
     content_lower = message.content.lower()
 
-    # update mood slightly over time
     update_mood()
 
     # -----------------------
-    # HI COMMAND
+    # STATUS REFRESH
     # -----------------------
-    if content_lower.strip() in ("hi", "hello", "h..hi.. fuhihi"):
+    if random.random() < 0.05:
+        await client.change_presence(activity=update_status())
+
+    # -----------------------
+    # HI
+    # -----------------------
+    if content_lower.strip() in ("hi", "hello", "hey"):
         await message.channel.send(random.choice(HI_REPLIES))
         return
 
     # -----------------------
-    # HYAHAAA TRIGGER
+    # HYAHAAA
     # -----------------------
     if re.search(r"hy+a+h+a+[ha!]*", content_lower):
         mood = "excited"
@@ -92,19 +116,27 @@ async def on_message(message):
         return
 
     # -----------------------
-    # HUG COMMAND
+    # HUG (ANY SENTENCE VERSION)
     # -----------------------
-    if content_lower.strip() in ("syoko hug", "hug syoko", "give hug"):
+    if "hug" in content_lower and "syoko" in content_lower:
+        hug_count += 1
+
         if mood == "shy":
-            await message.channel.send("f-fuhihi… a hug…?")
+            msg = "f-fuhihi… a hug…?"
         elif mood == "happy":
-            await message.channel.send("fuhihi! hug!! ✨ thank you… this feels warm… 🍄")
+            msg = "fuhihi!! hug!! ✨ this feels warm… 🍄"
         elif mood == "sleepy":
-            await message.channel.send("…mm… soft hug… fuhihi… <:sleeping:1492681477417078865>🍄")
+            msg = "…mm… soft hug… fuhihi… <:sleeping:1492681477417078865>"
         elif mood == "excited":
-            await message.channel.send("HYAHAAA hug energy!! ✨ <:hyaha:1492681248257085491>")
+            msg = "HYAHAAA hug energy!! ✨ <:hyaha:1492681248257085491>"
         else:
-            await message.channel.send("fuhihi… hug received… star point… 🍄")
+            msg = "fuhihi… hug received… 🍄"
+
+        # affection bonus line
+        if hug_count % 5 == 0:
+            msg += " …you’ve hugged me a lot… fuhihi…"
+
+        await message.channel.send(msg)
         return
 
     # -----------------------
@@ -118,7 +150,7 @@ async def on_message(message):
         return
 
     # -----------------------
-    # OCCASIONAL CHAT (MOOD AFFECTED)
+    # OCCASIONAL CHAT
     # -----------------------
     if random.random() < OCCASIONAL_CHANCE:
         reply = random.choice(OCCASIONAL_REPLIES)
@@ -128,7 +160,7 @@ async def on_message(message):
         elif mood == "sleepy":
             reply = "… " + reply
         elif mood == "happy":
-            reply = reply + " ✨"
+            reply += " ✨"
         elif mood == "excited":
             reply = reply.upper() + "!! <:hyaha:1492681248257085491>"
 
