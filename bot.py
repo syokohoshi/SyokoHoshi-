@@ -11,10 +11,15 @@ intents.message_content = True
 client = discord.Client(intents=intents)
 
 # -----------------------
-# MOOD SYSTEM + AFFECTION
+# MOOD SYSTEM + AFFECTION + MEMORY
 # -----------------------
 mood = "neutral"
 hug_count = 0
+
+# 🧠 MEMORY STORAGE
+memory = {
+    "hugs": {}  # user_id -> count
+}
 
 MOOD_POOL = ["neutral", "happy", "shy", "sleepy", "excited"]
 
@@ -24,22 +29,19 @@ def update_mood():
         mood = random.choice(MOOD_POOL)
 
 def update_status():
-    """Rotating presence based on mood"""
     try:
         if mood == "happy":
-            activity = discord.Game(name="fuhihi… happy 🍄")
+            return discord.Game(name="fuhihi… happy 🍄")
         elif mood == "shy":
-            activity = discord.Game(name="…watching quietly")
+            return discord.Game(name="…watching quietly...")
         elif mood == "sleepy":
-            activity = discord.Game(name="…sleepy mushrooms…")
+            return discord.Game(name="…sleeping kinoko…")
         elif mood == "excited":
-            activity = discord.Game(name="HYAHAAA energy!!")
+            return discord.Game(name="HYAHAAA energy!!")
         else:
-            activity = discord.Game(name="fuhihi… 🍄")
-
-        return activity
+            return discord.Game(name="fuhihi… 🍄")
     except:
-        return discord.Game(name="fuhihi… 🍄")
+        return discord.Game(name="fuhihi…")
 
 
 # -----------------------
@@ -85,7 +87,7 @@ async def on_ready():
 # -----------------------
 @client.event
 async def on_message(message):
-    global mood, hug_count
+    global mood, hug_count, memory
 
     if message.author == client.user:
         return
@@ -94,9 +96,7 @@ async def on_message(message):
 
     update_mood()
 
-    # -----------------------
-    # STATUS REFRESH
-    # -----------------------
+    # status refresh
     if random.random() < 0.05:
         await client.change_presence(activity=update_status())
 
@@ -116,11 +116,23 @@ async def on_message(message):
         return
 
     # -----------------------
-    # HUG (ANY SENTENCE VERSION)
+    # HUG + MEMORY SYSTEM
     # -----------------------
     if "hug" in content_lower and "syoko" in content_lower:
         hug_count += 1
 
+        user_id = str(message.author.id)
+
+        # 🧠 store memory per user
+        if user_id not in memory["hugs"]:
+            memory["hugs"][user_id] = 0
+
+        memory["hugs"][user_id] += 1
+        user_hugs = memory["hugs"][user_id]
+
+        # -----------------------
+        # BASE REACTIONS
+        # -----------------------
         if mood == "shy":
             msg = "f-fuhihi… a hug…?"
         elif mood == "happy":
@@ -132,15 +144,27 @@ async def on_message(message):
         else:
             msg = "fuhihi… hug received… 🍄"
 
-        # affection bonus line
+        # -----------------------
+        # GLOBAL HUG MILESTONE
+        # -----------------------
         if hug_count % 5 == 0:
             msg += " …you’ve hugged me a lot… fuhihi…"
+
+        # -----------------------
+        # PERSONAL MEMORY MOMENTS
+        # -----------------------
+        if user_hugs == 1:
+            msg += " …f-first hug… I'll remember it… 🍄"
+        elif user_hugs == 10:
+            msg += " …y-you’ve hugged me 10 times… fuhi.. that’s warm… 🍄"
+        elif user_hugs % 25 == 0:
+            msg += " …I remember you… fuhihi…"
 
         await message.channel.send(msg)
         return
 
     # -----------------------
-    # WELCOME (UNCHANGED)
+    # WELCOME
     # -----------------------
     if "welcome" in content_lower:
         reply = random.choice(WELCOME_REPLIES).format(
