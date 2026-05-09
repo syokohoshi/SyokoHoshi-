@@ -36,7 +36,7 @@ OCCASIONAL_REPLIES = [
     "…I like it here… 🍄",
 ]
 
-OCCASIONAL_CHANCE = 0.08
+OCCASIONAL_CHANCE = 0.03
 
 
 @client.event
