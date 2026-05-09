@@ -52,7 +52,7 @@ async def on_message(message):
 
     content_lower = message.content.lower()
 
-    if "hi" in content_lower.split() or content_lower in ("hi", "hello", "hey"):
+    if content_lower.strip() in ("hi", "hello", "hey"):
         await message.channel.send(random.choice(HI_REPLIES))
         return
 
@@ -70,4 +70,3 @@ async def on_message(message):
 
 
 client.run(TOKEN)
-
