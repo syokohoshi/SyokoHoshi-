@@ -1,6 +1,7 @@
 import os
 import random
 import re
+import time
 import discord
 
 TOKEN = os.environ.get("DISCORD_TOKEN")
@@ -11,22 +12,42 @@ intents.message_content = True
 client = discord.Client(intents=intents)
 
 # -----------------------
-# MOOD SYSTEM + AFFECTION + MEMORY
+# MOOD SYSTEM + MEMORY + COOLDOWN
 # -----------------------
 mood = "neutral"
 hug_count = 0
 
-# 🧠 MEMORY STORAGE
 memory = {
-    "hugs": {}  # user_id -> count
+    "hugs": {}
 }
 
 MOOD_POOL = ["neutral", "happy", "shy", "sleepy", "excited"]
 
+# 🧠 mood now changes every 2 hours
+last_mood_change = time.time()
+
 def update_mood():
-    global mood
-    if random.random() < 0.05:
+    global mood, last_mood_change
+
+    if time.time() - last_mood_change > 7200:  # 2 hours
         mood = random.choice(MOOD_POOL)
+        last_mood_change = time.time()
+
+
+# 🕒 reply cooldown system (prevents spam)
+last_reply_time = 0
+REPLY_COOLDOWN = 6  # seconds
+
+def can_reply():
+    global last_reply_time
+    now = time.time()
+
+    if now - last_reply_time < REPLY_COOLDOWN:
+        return False
+
+    last_reply_time = now
+    return True
+
 
 def update_status():
     try:
@@ -96,7 +117,9 @@ async def on_message(message):
 
     update_mood()
 
-    # status refresh
+    # -----------------------
+    # STATUS REFRESH (rare)
+    # -----------------------
     if random.random() < 0.05:
         await client.change_presence(activity=update_status())
 
@@ -104,6 +127,8 @@ async def on_message(message):
     # HI
     # -----------------------
     if content_lower.strip() in ("hi", "hello", "hey"):
+        if not can_reply():
+            return
         await message.channel.send(random.choice(HI_REPLIES))
         return
 
@@ -116,23 +141,22 @@ async def on_message(message):
         return
 
     # -----------------------
-    # HUG + MEMORY SYSTEM
+    # HUG + MEMORY
     # -----------------------
     if "hug" in content_lower and "syoko" in content_lower:
-        hug_count += 1
+        if not can_reply():
+            return
 
+        hug_count += 1
         user_id = str(message.author.id)
 
-        # 🧠 store memory per user
         if user_id not in memory["hugs"]:
             memory["hugs"][user_id] = 0
 
         memory["hugs"][user_id] += 1
         user_hugs = memory["hugs"][user_id]
 
-        # -----------------------
-        # BASE REACTIONS
-        # -----------------------
+        # base mood reaction
         if mood == "shy":
             msg = "f-fuhihi… a hug…?"
         elif mood == "happy":
@@ -144,19 +168,15 @@ async def on_message(message):
         else:
             msg = "fuhihi… hug received… 🍄"
 
-        # -----------------------
-        # GLOBAL HUG MILESTONE
-        # -----------------------
+        # global milestone
         if hug_count % 5 == 0:
             msg += " …you’ve hugged me a lot… fuhihi…"
 
-        # -----------------------
-        # PERSONAL MEMORY MOMENTS
-        # -----------------------
+        # personal memory
         if user_hugs == 1:
-            msg += " …f-first hug… I'll remember it… 🍄"
+            msg += " …first hug… I’ll remember it… 🍄"
         elif user_hugs == 10:
-            msg += " …y-you’ve hugged me 10 times… fuhi.. that’s warm… 🍄"
+            msg += " …10 hugs… that’s warm… 🍄"
         elif user_hugs % 25 == 0:
             msg += " …I remember you… fuhihi…"
 
@@ -167,6 +187,9 @@ async def on_message(message):
     # WELCOME
     # -----------------------
     if "welcome" in content_lower:
+        if not can_reply():
+            return
+
         reply = random.choice(WELCOME_REPLIES).format(
             mention=f"<@{message.author.id}>"
         )
@@ -177,6 +200,9 @@ async def on_message(message):
     # OCCASIONAL CHAT
     # -----------------------
     if random.random() < OCCASIONAL_CHANCE:
+        if not can_reply():
+            return
+
         reply = random.choice(OCCASIONAL_REPLIES)
 
         if mood == "shy":
