@@ -23,23 +23,24 @@ memory = {
 
 MOOD_POOL = ["neutral", "happy", "shy", "sleepy", "excited"]
 
-# 🧠 mood now changes every 2 hours
+# 🧠 mood changes every 2 hours
 last_mood_change = time.time()
 
 def update_mood():
     global mood, last_mood_change
 
-    if time.time() - last_mood_change > 7200:  # 2 hours
+    if time.time() - last_mood_change > 7200:
         mood = random.choice(MOOD_POOL)
         last_mood_change = time.time()
 
 
-# 🕒 reply cooldown system (prevents spam)
+# 🕒 reply cooldown system
 last_reply_time = 0
-REPLY_COOLDOWN = 6  # seconds
+REPLY_COOLDOWN = 6
 
 def can_reply():
     global last_reply_time
+
     now = time.time()
 
     if now - last_reply_time < REPLY_COOLDOWN:
@@ -81,6 +82,10 @@ WELCOME_REPLIES = [
     "fuhihi… {mention}-chan is so warm… star point…! <:emoji_20:1500638307628093510>",
 ]
 
+THANK_REPLIES = [
+    "{mention} is being kind… fuhi… here's a starry mushroom… <:star_mushroom:1502984265241989160>"
+]
+
 OCCASIONAL_REPLIES = [
     "fuhihi…",
     "…mushrooms are nice… 🍄",
@@ -99,6 +104,7 @@ OCCASIONAL_CHANCE = 0.03
 @client.event
 async def on_ready():
     await client.change_presence(activity=update_status())
+
     print(f"Logged in as {client.user} (ID: {client.user.id})")
     print("Syoko is here… fuhihi… 🍄")
 
@@ -118,7 +124,7 @@ async def on_message(message):
     update_mood()
 
     # -----------------------
-    # STATUS REFRESH (rare)
+    # STATUS REFRESH
     # -----------------------
     if random.random() < 0.05:
         await client.change_presence(activity=update_status())
@@ -129,6 +135,7 @@ async def on_message(message):
     if content_lower.strip() in ("hi", "hello", "hey"):
         if not can_reply():
             return
+
         await message.channel.send(random.choice(HI_REPLIES))
         return
 
@@ -137,7 +144,10 @@ async def on_message(message):
     # -----------------------
     if re.search(r"hy+a+h+a+[ha!]*", content_lower):
         mood = "excited"
-        await message.channel.send("HYAHAAA!! <:hyaha:1492681248257085491>")
+
+        await message.channel.send(
+            "HYAHAAA!! <:hyaha:1492681248257085491>"
+        )
         return
 
     # -----------------------
@@ -148,6 +158,7 @@ async def on_message(message):
             return
 
         hug_count += 1
+
         user_id = str(message.author.id)
 
         if user_id not in memory["hugs"]:
@@ -156,7 +167,7 @@ async def on_message(message):
         memory["hugs"][user_id] += 1
         user_hugs = memory["hugs"][user_id]
 
-        # base mood reaction
+        # mood reactions
         if mood == "shy":
             msg = "f-fuhihi… a hug…?"
         elif mood == "happy":
@@ -184,6 +195,20 @@ async def on_message(message):
         return
 
     # -----------------------
+    # THANK YOU
+    # -----------------------
+    if "thank you" in content_lower or "thanks" in content_lower:
+        if not can_reply():
+            return
+
+        reply = random.choice(THANK_REPLIES).format(
+            mention=f"<@{message.author.id}>"
+        )
+
+        await message.reply(reply)
+        return
+
+    # -----------------------
     # WELCOME
     # -----------------------
     if "welcome" in content_lower:
@@ -193,6 +218,7 @@ async def on_message(message):
         reply = random.choice(WELCOME_REPLIES).format(
             mention=f"<@{message.author.id}>"
         )
+
         await message.reply(reply)
         return
 
@@ -212,7 +238,10 @@ async def on_message(message):
         elif mood == "happy":
             reply += " ✨"
         elif mood == "excited":
-            reply = reply.upper() + "!! <:hyaha:1492681248257085491>"
+            reply = (
+                reply.upper()
+                + "!! <:hyaha:1492681248257085491>"
+            )
 
         await message.channel.send(reply)
 
